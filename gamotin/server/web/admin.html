@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gamotin Services – Admin</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--tx:#1b2430;--mut:#64707e;--pri:#0f6cbd;--ok:#188a42;--bd:#dde3ea}
+@media(prefers-color-scheme:dark){:root{--bg:#10151b;--card:#1a222b;--tx:#e8edf2;--mut:#93a0ae;--pri:#4aa3f0;--ok:#43c872;--bd:#2b3744}}
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0}
+h1{font-size:18px;margin:0}main{max-width:900px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin:10px 0}
+button,input{font:inherit;padding:10px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx)}
+button{cursor:pointer}button.p{background:var(--pri);color:#fff;border:0}button.ok{background:var(--ok);color:#fff;border:0}
+.tabs button.on{background:var(--pri);color:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.mut{color:var(--mut)}
+.tag{padding:2px 8px;border-radius:99px;border:1px solid var(--bd);font-size:13px}
+#login{max-width:340px;margin:60px auto}#login input{width:100%;margin:6px 0}
+a{color:var(--pri)}.new{outline:2px solid var(--pri)}
+</style></head><body>
+<div id="login" class="card"><h1>Gamotin Services – Admin</h1><p class="mut">Sign in with your admin account.</p>
+<form onsubmit="doLogin(event)"><input id="ph" placeholder="Phone" autocomplete="username">
+<input id="pw" type="password" placeholder="Password" autocomplete="current-password">
+<button class="p" style="width:100%">Sign in</button><p id="msg" style="color:#c0392b"></p></form></div>
+<div id="app" hidden>
+<header><h1>Print Orders <span id="cnt" class="tag"></span></h1>
+<div class="row"><button onclick="askNotif()" id="nb">Enable alerts</button><button onclick="logout()">Logout</button></div></header>
+<main><div class="row tabs"><button id="t-pending" class="on" onclick="tab('pending')">Pending</button>
+<button id="t-finished" onclick="tab('finished')">Finished</button></div><div id="list"></div></main></div>
+<script>
+let token=localStorage.gt||'',seen=null,cur='pending',orders=[],fresh=new Set();
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(p,o={}){const r=await fetch(p,{...o,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token}});
+ const j=await r.json().catch(()=>({}));if(!r.ok){if(r.status==401||r.status==403)logout();throw Error(j.error||r.status)}return j}
+async function doLogin(e){e.preventDefault();try{
+ const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:$('#ph').value,password:$('#pw').value})});
+ const j=await r.json();if(!r.ok)throw Error(j.error);if(j.role!=='admin')throw Error('This account is not an admin');
+ token=j.token;localStorage.gt=token;start()}catch(x){$('#msg').textContent=x.message}}
+function logout(){localStorage.removeItem('gt');token='';location.reload()}
+function askNotif(){if('Notification'in window)Notification.requestPermission().then(()=>$('#nb').hidden=true)}
+function beep(){try{const a=new AudioContext(),o=a.createOscillator();o.connect(a.destination);o.frequency.value=880;o.start();setTimeout(()=>{o.stop();a.close()},300)}catch(e){}}
+function alertNew(n){beep();document.title=`(${n}) New print order!`;
+ if('Notification'in window&&Notification.permission==='granted')new Notification('Gamotin Services',{body:n+' new print order(s)'})}
+function tab(t){cur=t;$('#t-pending').classList.toggle('on',t=='pending');$('#t-finished').classList.toggle('on',t=='finished');render()}
+function render(){const pend=orders.filter(o=>o.status=='pending').length;$('#cnt').textContent=pend+' pending';
+ const l=orders.filter(o=>o.status==cur);
+ $('#list').innerHTML=l.length?l.map(o=>`<div class="card ${fresh.has(o.id)?'new':''}">
+ <div class="row"><b>Order #${o.id}</b><span class="tag">${o.status}</span><span class="mut">${new Date(o.created_at).toLocaleString()}</span></div>
+ <p><b>${esc(o.user_name)}</b> · <a href="tel:${esc(o.user_phone)}">${esc(o.user_phone)}</a> ${o.user_email?'· '+esc(o.user_email):''}</p>
+ <div class="row"><span class="tag">${o.copies} copies</span><span class="tag">${o.color=='color'?'Colored':'Black &amp; White'}</span>
+ <span class="tag">${esc(o.paper_size)}</span><span class="tag">${esc(o.paper_type)}</span><span class="tag">${o.duplex?'Back to back':'One side'}</span>
+ ${o.page_range?`<span class="tag">Pages: ${esc(o.page_range)}</span>`:''}</div>
+ ${o.notes?`<p class="mut">“${esc(o.notes)}”</p>`:''}
+ <div>${o.files.map(f=>`<div><a href="/api/orders/${o.id}/files/${f.id}?token=${token}" download>⬇ ${esc(f.name)}</a> <span class="mut">${(f.size/1024).toFixed(0)} KB</span></div>`).join('')}</div>
+ ${o.status=='pending'?`<p><button class="ok" onclick="finish(${o.id})">Finished work – notify customer</button></p>`:`<p class="mut">Finished ${new Date(o.finished_at).toLocaleString()}</p>`}
+ </div>`).join(''):'<p class="mut" style="text-align:center">Nothing here.</p>'}
+async function finish(id){if(!confirm('Mark order #'+id+' as finished and notify the customer?'))return;
+ await api(`/api/orders/${id}/finish`,{method:'POST'});poll()}
+async function poll(){try{orders=await api('/api/orders');const ids=new Set(orders.map(o=>o.id));
+ if(seen){const nw=orders.filter(o=>!seen.has(o.id));if(nw.length){nw.forEach(o=>fresh.add(o.id));alertNew(nw.length)}}
+ seen=ids;render()}catch(e){}}
+function start(){$('#login').hidden=true;$('#app').hidden=false;if('Notification'in window&&Notification.permission==='granted')$('#nb').hidden=true;poll();setInterval(poll,5000)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)document.title='Gamotin Services – Admin'});
+if(token)start();
+</script></body></html>
