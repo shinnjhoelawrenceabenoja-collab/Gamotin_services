@@ -1,4 +1,11 @@
-# Gamotin Services v0.0.1
-See the step-by-step tutorial in the chat. Layout:
-  server/  -> Dart API + admin web page (needs PostgreSQL)
-  app/     -> Flutter source: copy lib/ and pubspec.yaml into a project made with `flutter create`
+# Gamotin Services
+
+This repository contains the Gamotin Flutter client and its Dart backend.
+
+- `app_new/` is the current full Flutter client project.
+- `server/` contains the Dart API, admin page, and PostgreSQL schema.
+- `app/` contains an earlier Flutter source version.
+- `update/` contains incremental app and server changes.
+- `lib_backup/` and `pubspec_backup.yaml` contain backups.
+
+The root-level Flutter files are retained from the repository's initial starter commit.

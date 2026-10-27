@@ -1,0 +1,11 @@
+name: gamotin_server
+description: Gamotin Services API + admin web page
+environment:
+  sdk: ^3.3.0
+dependencies:
+  crypto: ^3.0.3
+  postgres: ^3.2.0
+  shelf: ^1.4.1
+  shelf_multipart: ^2.0.0
+  shelf_router: ^1.1.4
+  shelf_static: ^1.1.2
