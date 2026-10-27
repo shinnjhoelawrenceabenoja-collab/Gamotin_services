@@ -1,0 +1,25 @@
+# Dart and Flutter generated files
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/build/
+**/coverage/
+**/.pub-cache/
+**/.pub/
+
+# IDE and machine-local configuration
+**/.idea/
+**/*.iml
+**/local.properties
+
+# Credentials and signing keys
+.env
+.env.*
+**/*.jks
+**/*.keystore
+**/key.properties
+**/google-services.json
+
+# User-uploaded files
+/server/uploads/
